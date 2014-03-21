@@ -59,6 +59,10 @@ NSString *const YapDatabaseNotificationKey          = @"notification";
 #define DEFAULT_MAX_CONNECTION_POOL_COUNT 5    // connections
 #define DEFAULT_CONNECTION_POOL_LIFETIME  90.0 // seconds
 
+@interface YapDatabase()
+// A better design wouldn't hold the passphrase in memory
+@property (nonatomic, strong, readwrite) NSString *passphrase;
+@end
 
 @implementation YapDatabase
 
@@ -183,7 +187,8 @@ NSString *const YapDatabaseNotificationKey          = @"notification";
 	       metadataSerializer:NULL
 	     metadataDeserializer:NULL
 	          objectSanitizer:NULL
-	        metadataSanitizer:NULL];
+	        metadataSanitizer:NULL
+                   passphrase:nil];
 }
 
 - (id)initWithPath:(NSString *)inPath
@@ -196,7 +201,8 @@ NSString *const YapDatabaseNotificationKey          = @"notification";
 	       metadataSerializer:inSerializer
 	     metadataDeserializer:inDeserializer
 	          objectSanitizer:NULL
-	        metadataSanitizer:NULL];
+	        metadataSanitizer:NULL
+                   passphrase:nil];
 }
 
 - (id)initWithPath:(NSString *)inPath
@@ -210,7 +216,8 @@ NSString *const YapDatabaseNotificationKey          = @"notification";
 	       metadataSerializer:inSerializer
 	     metadataDeserializer:inDeserializer
 	          objectSanitizer:inSanitizer
-	        metadataSanitizer:inSanitizer];
+	        metadataSanitizer:inSanitizer
+                   passphrase:nil];
 }
 
 - (id)initWithPath:(NSString *)inPath objectSerializer:(YapDatabaseSerializer)inObjectSerializer
@@ -224,7 +231,8 @@ NSString *const YapDatabaseNotificationKey          = @"notification";
 	       metadataSerializer:inMetadataSerializer
 	     metadataDeserializer:inMetadataDeserializer
 	          objectSanitizer:NULL
-	        metadataSanitizer:NULL];
+	        metadataSanitizer:NULL
+                   passphrase:nil];
 }
 
 - (id)initWithPath:(NSString *)inPath objectSerializer:(YapDatabaseSerializer)inObjectSerializer
@@ -232,7 +240,8 @@ NSString *const YapDatabaseNotificationKey          = @"notification";
                                     metadataSerializer:(YapDatabaseSerializer)inMetadataSerializer
                                   metadataDeserializer:(YapDatabaseDeserializer)inMetadataDeserializer
                                        objectSanitizer:(YapDatabaseSanitizer)inObjectSanitizer
-                                     metadataSanitizer:(YapDatabaseSanitizer)inMetadataSanitizer;
+                                     metadataSanitizer:(YapDatabaseSanitizer)inMetadataSanitizer
+                                            passphrase:(NSString*)passphrase;
 {
 	// First, standardize path.
 	// This allows clients to be lazy when passing paths.
@@ -250,12 +259,16 @@ NSString *const YapDatabaseNotificationKey          = @"notification";
 	if ((self = [super init]))
 	{
 		databasePath = path;
+        self.passphrase = passphrase;
 		
 		BOOL(^openConfigCreate)(void) = ^BOOL (void) { @autoreleasepool {
 		
 			BOOL result = YES;
 			
 			if (result) result = [self openDatabase];
+#ifdef SQLITE_HAS_CODEC
+            if (result) result = [self configureEncryptionWithPassphrase:passphrase];
+#endif
 			if (result) result = [self configureDatabase];
 			if (result) result = [self createTables];
 			
@@ -461,6 +474,26 @@ NSString *const YapDatabaseNotificationKey          = @"notification";
 	
 	return YES;
 }
+
+#ifdef SQLITE_HAS_CODEC
+/**
+ * Configures database encryption via SQLCipher.
+ **/
+- (BOOL)configureEncryptionWithPassphrase:(NSString*)passphrase
+{
+	int status;
+    
+    const char *key = [passphrase UTF8String];
+    NSUInteger keyLength = [passphrase lengthOfBytesUsingEncoding:NSUTF8StringEncoding];
+    status = sqlite3_key(db, key, (int)keyLength);
+    if (status != SQLITE_OK)
+	{
+		YDBLogError(@"Error setting up sqlcipher key: %d %s", status, sqlite3_errmsg(db));
+		return NO;
+	}
+    return YES;
+}
+#endif
 
 /**
  * Creates the database tables we need:
@@ -1184,7 +1217,7 @@ NSString *const YapDatabaseNotificationKey          = @"notification";
 **/
 - (YapDatabaseConnection *)newConnection
 {
-	YapDatabaseConnection *connection = [[YapDatabaseConnection alloc] initWithDatabase:self];
+	YapDatabaseConnection *connection = [[YapDatabaseConnection alloc] initWithDatabase:self passphrase:self.passphrase];
 	
 	[self addConnection:connection];
 	return connection;

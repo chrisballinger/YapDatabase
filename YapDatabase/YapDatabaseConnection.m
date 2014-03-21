@@ -99,7 +99,7 @@
 	}
 }
 
-- (id)initWithDatabase:(YapDatabase *)inDatabase
+- (id)initWithDatabase:(YapDatabase *)inDatabase passphrase:(NSString *)passphrase
 {
 	if ((self = [super init]))
 	{
@@ -212,6 +212,11 @@
 				
 				sqlite3_busy_timeout(db, 50); // milliseconds
 			}
+#ifdef SQLITE_HAS_CODEC
+            const char *pKey = [passphrase UTF8String];
+            int nKey = (int)[passphrase lengthOfBytesUsingEncoding:NSUTF8StringEncoding];
+            sqlite3_key(db, pKey, nKey);
+#endif
 		}
 		
 		#if TARGET_OS_IPHONE

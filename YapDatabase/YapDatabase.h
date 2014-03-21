@@ -186,7 +186,8 @@ extern NSString *const YapDatabaseAllKeysRemovedKey;
                                   metadataSerializer:(YapDatabaseSerializer)metadataSerializer
                                 metadataDeserializer:(YapDatabaseDeserializer)metadataDeserializer
                                      objectSanitizer:(YapDatabaseSanitizer)objectSanitizer
-                                   metadataSanitizer:(YapDatabaseSanitizer)metadataSanitizer;
+                                   metadataSanitizer:(YapDatabaseSanitizer)metadataSanitizer
+                                          passphrase:(NSString*)passphrase;
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 #pragma mark Properties

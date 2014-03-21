@@ -215,7 +215,7 @@ extern NSString *const YapDatabaseNotificationKey;
 	BOOL allKeysRemoved;
 }
 
-- (id)initWithDatabase:(YapDatabase *)database;
+- (id)initWithDatabase:(YapDatabase *)database passphrase:(NSString*)passphrase;
 
 - (sqlite3_stmt *)beginTransactionStatement;
 - (sqlite3_stmt *)commitTransactionStatement;
