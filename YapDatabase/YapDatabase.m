@@ -623,6 +623,31 @@ NSString *const YapDatabaseNotificationKey           = @"notification";
 	}
     return YES;
 }
+
+/**
+ * Changes the SQLCipher database passphrase via sqlite3_rekey. This
+ * method is only available when using the 'YapDatabase/SQLCipher' subspec.
+ * @warning This method may take a long time to complete on large databases.
+ * @param encryptionKey must have a non-zero length
+ * @return success status of the sqlite operation
+ */
+- (BOOL) changeEncryptionKey:(NSString*)encryptionKey {
+    NSAssert(encryptionKey.length > 0, @"encryptionKey must have length > 0!");
+    if (encryptionKey.length == 0) {
+        YDBLogError(@"encryptionKey must have length > 0!");
+        return NO;
+    }
+    NSData *keyData = [encryptionKey dataUsingEncoding:NSUTF8StringEncoding];
+    int status = sqlite3_rekey(db, keyData.bytes, keyData.length);
+    if (status != SQLITE_OK)
+    {
+        const char *error_msg = sqlite3_errmsg(db);
+        YDBLogError(@"Error with sqlite3_rekey: %d %s", status, error_msg);
+        return NO;
+    }
+    return YES;
+}
+
 #endif
 
 /**
