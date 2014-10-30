@@ -44,6 +44,10 @@ NSString *const YapDatabaseExtensionsOrderKey        = @"extensionsOrder";
 NSString *const YapDatabaseExtensionDependenciesKey  = @"extensionDependencies";
 NSString *const YapDatabaseNotificationKey           = @"notification";
 
+#ifdef SQLITE_HAS_CODEC
+NSString *const YapDatabaseEncryptionKeyChangeNotification = @"YapDatabaseEncryptionKeyChangeNotification";
+#endif
+
 /**
  * The database version is stored (via pragma user_version) to sqlite.
  * It is used to represent the version of the userlying architecture of YapDatabase.
@@ -600,6 +604,20 @@ NSString *const YapDatabaseNotificationKey           = @"notification";
 
 
 #ifdef SQLITE_HAS_CODEC
+
+- (NSData*) databaseEncryptionPassphrase {
+    NSAssert(options.passphraseBlock != nil, @"Passphrase block must not be nil when using SQLCipher!");
+    NSString *passphrase = options.passphraseBlock();
+    NSAssert(passphrase.length > 0, @"SQLCipher passphrase cannot be 0 length!");
+    if (passphrase.length == 0) {
+        YDBLogError(@"SQLCipher passphrase cannot be 0 length!");
+        @throw [NSException exceptionWithName:@"YapDatabaseException" reason:@"SQLCipher passphrase cannot be 0 length!" userInfo:nil];
+        return nil;
+    }
+    NSData *passphraseData = [passphrase dataUsingEncoding:NSUTF8StringEncoding];
+    return passphraseData;
+}
+
 /**
  * Configures database encryption via SQLCipher.
 **/
@@ -607,15 +625,11 @@ NSString *const YapDatabaseNotificationKey           = @"notification";
 {
 	int status;
     
-    NSAssert(options.passphraseBlock != nil, @"Passphrase block must not be nil when using SQLCipher!");
-    
-    NSString *passphrase = options.passphraseBlock();
-    
-    NSAssert(passphrase != nil, @"SQLCipher passphrase cannot be nil!");
-    
-    const char *key = [passphrase UTF8String];
-    NSUInteger keyLength = [passphrase lengthOfBytesUsingEncoding:NSUTF8StringEncoding];
-    status = sqlite3_key(sqlite, key, (int)keyLength);
+    NSData *passphraseData = [self databaseEncryptionPassphrase];
+    if (!passphraseData.length) {
+        return NO;
+    }
+    status = sqlite3_key(sqlite, passphraseData.bytes, (int)passphraseData.length);
     if (status != SQLITE_OK)
 	{
 		YDBLogError(@"Error setting up sqlcipher key: %d %s", status, sqlite3_errmsg(sqlite));
@@ -628,23 +642,22 @@ NSString *const YapDatabaseNotificationKey           = @"notification";
  * Changes the SQLCipher database passphrase via sqlite3_rekey. This
  * method is only available when using the 'YapDatabase/SQLCipher' subspec.
  * @warning This method may take a long time to complete on large databases.
- * @param encryptionKey must have a non-zero length
  * @return success status of the sqlite operation
  */
-- (BOOL) changeEncryptionKey:(NSString*)encryptionKey {
-    NSAssert(encryptionKey.length > 0, @"encryptionKey must have length > 0!");
-    if (encryptionKey.length == 0) {
-        YDBLogError(@"encryptionKey must have length > 0!");
+- (BOOL) changeEncryptionKey {
+    NSData *passphraseData = [self databaseEncryptionPassphrase];
+    if (!passphraseData.length) {
         return NO;
     }
-    NSData *keyData = [encryptionKey dataUsingEncoding:NSUTF8StringEncoding];
-    int status = sqlite3_rekey(db, keyData.bytes, keyData.length);
+
+    int status = sqlite3_rekey(db, passphraseData.bytes, passphraseData.length);
     if (status != SQLITE_OK)
     {
         const char *error_msg = sqlite3_errmsg(db);
         YDBLogError(@"Error with sqlite3_rekey: %d %s", status, error_msg);
         return NO;
     }
+    [[NSNotificationCenter defaultCenter] postNotificationName:YapDatabaseEncryptionKeyChangeNotification object:self];
     return YES;
 }
 

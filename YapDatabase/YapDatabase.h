@@ -656,13 +656,13 @@ __attribute((deprecated("Use method asyncUnregisterExtensionWithName:completionQ
 #pragma mark SQLCipher Database Encryption
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /**
- * Changes the SQLCipher database passphrase via sqlite3_rekey. This
+ * Changes the SQLCipher database passphrase via sqlite3_rekey. 
+ * The new passphrase must be available within the passphraseBlock in YapDatabaseOptions. This
  * method is only available when using the 'YapDatabase/SQLCipher' subspec.
  * @warning This method may take a long time to complete on large databases.
- * @param encryptionKey must have a non-zero length
  * @return success status of the sqlite operation
  */
-- (BOOL) changeEncryptionKey:(NSString*)encryptionKey;
+- (BOOL) changeEncryptionKey;
 #endif
 
 @end
