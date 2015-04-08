@@ -38,6 +38,10 @@ extern NSString *const YapDatabaseExtensionDependenciesKey;
 extern NSString *const YapDatabaseRemovedRowidsKey;
 extern NSString *const YapDatabaseNotificationKey;
 
+#ifdef SQLITE_HAS_CODEC
+extern NSString *const YapDatabaseEncryptionKeyChangeNotification;
+#endif
+
 @interface YapDatabase () {
 @public
 	

@@ -288,6 +288,8 @@ NS_INLINE BOOL YDBIsMainThread()
 #ifdef SQLITE_HAS_CODEC
                 // Configure SQLCipher encryption for the new database connection.
                 [database configureEncryptionForDatabase:db];
+                
+                [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(processEncryptionKeyChangeNotification:) name:YapDatabaseEncryptionKeyChangeNotification object:database];
 #endif
 			}
 		}
@@ -746,6 +748,14 @@ NS_INLINE BOOL YDBIsMainThread()
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 #pragma mark Utilities
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+#ifdef SQLITE_HAS_CODEC
+// When the encryption key changes, make sure to change the
+// key for every connection
+- (void)processEncryptionKeyChangeNotification:(NSNotification*)notification {
+    [database configureEncryptionForDatabase:db];
+}
+#endif
 
 - (void)updateKeyCacheLimit
 {

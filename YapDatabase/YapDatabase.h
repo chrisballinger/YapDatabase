@@ -871,4 +871,18 @@ __attribute((deprecated("Use method asyncUnregisterExtensionWithName:completionQ
 **/
 @property (atomic, assign, readwrite) NSTimeInterval connectionPoolLifetime;
 
+#ifdef SQLITE_HAS_CODEC
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+#pragma mark SQLCipher Database Encryption
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/**
+ * Changes the SQLCipher database passphrase via sqlite3_rekey. You MUST call this method after changing the value returned from the cipherKeyBlock.
+ * The new passphrase must be available within the cipherKeyBlock in YapDatabaseOptions. This
+ * method is only available when using the 'YapDatabase/SQLCipher' subspec.
+ * @warning This method may take a long time to complete on large databases.
+ * @return success status of the sqlite operation
+ */
+- (BOOL) rekeyDatabase;
+#endif
+
 @end

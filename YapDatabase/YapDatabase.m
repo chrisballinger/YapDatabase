@@ -44,6 +44,10 @@ NSString *const YapDatabaseExtensionsOrderKey        = @"extensionsOrder";
 NSString *const YapDatabaseExtensionDependenciesKey  = @"extensionDependencies";
 NSString *const YapDatabaseNotificationKey           = @"notification";
 
+#ifdef SQLITE_HAS_CODEC
+NSString *const YapDatabaseEncryptionKeyChangeNotification = @"YapDatabaseEncryptionKeyChangeNotification";
+#endif
+
 /**
  * The database version is stored (via pragma user_version) to sqlite.
  * It is used to represent the version of the userlying architecture of YapDatabase.
@@ -680,6 +684,7 @@ NSString *const YapDatabaseNotificationKey           = @"notification";
 
 
 #ifdef SQLITE_HAS_CODEC
+
 /**
  * Configures database encryption via SQLCipher.
 **/
@@ -700,6 +705,34 @@ NSString *const YapDatabaseNotificationKey           = @"notification";
 	}
 	return YES;
 }
+
+/**
+ * Changes the SQLCipher database passphrase via sqlite3_rekey. You MUST call this method after changing the value returned from the cipherKeyBlock.
+ * The new passphrase must be available within the cipherKeyBlock in YapDatabaseOptions. This
+ * method is only available when using the 'YapDatabase/SQLCipher' subspec.
+ * @warning This method may take a long time to complete on large databases.
+ * @return success status of the sqlite operation
+ */
+- (BOOL) rekeyDatabase {
+    NSAssert(options.cipherKeyBlock != NULL, @"YapDatabaseOptions.cipherKeyBlock must be set when using SQLCipher!");
+    
+    NSData *keyData = options.cipherKeyBlock();
+    NSAssert(keyData != nil, @"SQLCipher key cannot be nil!");
+    if (!keyData) {
+        return NO;
+    }
+
+    int status = sqlite3_rekey(db, keyData.bytes, keyData.length);
+    if (status != SQLITE_OK)
+    {
+        const char *error_msg = sqlite3_errmsg(db);
+        YDBLogError(@"Error with sqlite3_rekey: %d %s", status, error_msg);
+        return NO;
+    }
+    [[NSNotificationCenter defaultCenter] postNotificationName:YapDatabaseEncryptionKeyChangeNotification object:self];
+    return YES;
+}
+
 #endif
 
 /**

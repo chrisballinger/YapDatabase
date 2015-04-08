@@ -88,6 +88,8 @@ typedef NSData* (^YapDatabaseCipherKeyBlock)(void);
  *
  * You must use the 'YapDatabase/SQLCipher' subspec
  * in your Podfile for this option to take effect.
+ *
+ * If you change the value that is returned from this block you must call rekeyDatabase.
  **/
 @property (nonatomic, copy) YapDatabaseCipherKeyBlock cipherKeyBlock;
 #endif
