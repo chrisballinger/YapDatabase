@@ -50,6 +50,10 @@ extern NSString *const YapDatabaseNotificationKey;
 static NSString *const ext_key_class = @"class";
 
 
+#ifdef SQLITE_HAS_CODEC
+extern NSString *const YapDatabaseEncryptionKeyChangeNotification;
+#endif
+
 @interface YapDatabase () {
 @public
 	
