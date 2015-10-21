@@ -3640,7 +3640,7 @@
  *
  * @see [YapDatabase registerExtension:withName:]
 **/
-- (id)extension:(NSString *)extensionName
+- (nullable id)extension:(NSString *)extensionName
 {
 	// This method is PUBLIC
 	
@@ -3675,7 +3675,7 @@
 	return extTransaction;
 }
 
-- (id)ext:(NSString *)extensionName
+- (nullable id)ext:(NSString *)extensionName
 {
 	// This method is PUBLIC
 	
